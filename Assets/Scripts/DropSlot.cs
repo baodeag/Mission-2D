@@ -3,23 +3,19 @@ using UnityEngine.EventSystems;
 
 public class DropSlot : MonoBehaviour, IDropHandler
 {
-    [Header("ID mong đợi (khớp với DragItem.itemId)")]
-    public string expectedId; // ví dụ: "circle", "square", ...
+    [Header("ID slot này (khớp với Piece)")]
+    public int id; // 0=Circle, 1=Square, 2=Triangle
 
-    public bool IsFilled => filledItem != null;
-    public bool IsCorrectlyFilled { get; private set; }
+    [Header("Trạng thái")]
+    public bool occupied;
+    public bool isCorrect;
 
-    DragItem filledItem;
-    SortShapesTask task;
-
-    void Awake()
-    {
-        task = GetComponentInParent<SortShapesTask>();
-    }
+    [Header("Thông báo về Task")]
+    public SortShapesTask owner; // gán SortShapesTask (trên gốc prefab)
 
     public void OnDrop(PointerEventData eventData)
     {
-        if (IsFilled) return; // đơn giản: không cho đè lên
+        if (occupied) return;
 
         var go = eventData.pointerDrag;
         if (!go) return;
@@ -27,30 +23,11 @@ public class DropSlot : MonoBehaviour, IDropHandler
         var item = go.GetComponent<DragItem>();
         if (!item) return;
 
-        bool correct = (item.itemId == expectedId);
+        // chấp nhận mọi mảnh, nhưng chỉ đúng khi id khớp
+        occupied = true;
+        isCorrect = (item.id == id);
 
-        if (correct)
-        {
-            filledItem = item;
-            IsCorrectlyFilled = true;
-            item.SnapToSlot(this);
-            task?.NotifySlotChanged();
-        }
-        else
-        {
-            // Sai thì để item tự quay về trong OnEndDrag
-            IsCorrectlyFilled = false;
-        }
-    }
-
-    public void ClearSlot(bool silent = false)
-    {
-        if (filledItem)
-        {
-            // Không gọi ReturnToStart ở đây (để DragItem tự xử lý nếu cần)
-            filledItem = null;
-        }
-        IsCorrectlyFilled = false;
-        if (!silent) task?.NotifySlotChanged();
+        item.SetDroppedOnSlot(this);
+        owner?.OnAnySlotChanged();
     }
 }

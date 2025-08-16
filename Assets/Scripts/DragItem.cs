@@ -4,99 +4,86 @@ using UnityEngine.UI;
 
 public class DragItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
-    [Header("ID phải khớp với DropSlot.expectedId")]
-    public string itemId;
+    [Header("ID của mảnh này (khớp với Slot)")]
+    public int id; // 0=Circle, 1=Square, 2=Triangle
 
-    [Header("Refs (kéo trong Inspector)")]
-    [SerializeField] Canvas canvas;        // Kéo Canvas UI_Root vào (bắt buộc)
-    [SerializeField] Transform dragRoot;   // Kéo MiniGameLayer hoặc 1 Empty "DragLayer" ở trong Canvas
+    [Header("Tham chiếu")]
+    public Canvas canvas;            // ★ KÉO Canvas (UI_Root) vào đây
+    public RectTransform dragRoot;   // ★ KÉO MiniGame_DragSort vào đây (hoặc để trống => dùng chính canvas)
 
-    RectTransform rect;
+    RectTransform rt;
     CanvasGroup cg;
+    Transform originalParent;
+    Vector2 originalAnchoredPos;
 
-    // Lưu trạng thái ban đầu để trả về
-    Transform startParent;
-    int startSiblingIndex;
-    Vector2 startAnchoredPos;
-
-    public DropSlot currentSlot { get; private set; }
+    [HideInInspector] public DropSlot currentSlot;
 
     void Awake()
     {
-        rect = GetComponent<RectTransform>();
-        cg = GetComponent<CanvasGroup>();
-        if (!cg) cg = gameObject.AddComponent<CanvasGroup>();
-        if (!canvas) canvas = GetComponentInParent<Canvas>(); // dự phòng, nhưng nên gán tay
-        if (!dragRoot && canvas) dragRoot = canvas.transform; // nếu chưa gán, dùng gốc Canvas
+        rt = GetComponent<RectTransform>();
+        cg = gameObject.GetComponent<CanvasGroup>();
+        if (cg == null) cg = gameObject.AddComponent<CanvasGroup>();
     }
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        // (QUAN TRỌNG) Đảm bảo Graphic của chính object này là Raycast Target
-        var img = GetComponent<Graphic>();
-        if (img && !img.raycastTarget) img.raycastTarget = true;
+        originalParent = rt.parent;
+        originalAnchoredPos = rt.anchoredPosition;
 
-        startParent = rect.parent;
-        startSiblingIndex = rect.GetSiblingIndex();
-        startAnchoredPos = rect.anchoredPosition;
+        if (currentSlot != null)
+        {
+            currentSlot.occupied = false;
+            currentSlot.isCorrect = false;
+            currentSlot = null;
+        }
 
-        // Nếu đang ở Slot, thả ra trước
-        if (currentSlot) { currentSlot.ClearSlot(); currentSlot = null; }
+        cg.blocksRaycasts = false; // cho slot nhận OnDrop
+        transform.SetAsLastSibling();
 
-        // Re-parent ra dragRoot để không bị LayoutGroup giữ chặt
-        rect.SetParent(dragRoot, worldPositionStays: false);
+        // ★ Đưa item lên một root ổn định để kéo (không bị layout/anchor khác can thiệp)
+        var parentForDrag = (dragRoot ? dragRoot : canvas.transform) as RectTransform;
+        rt.SetParent(parentForDrag, true);
 
-        // Cho phép pointer xuyên qua vật thể đang kéo, để Slot nhận OnDrop
-        cg.blocksRaycasts = false;
-
-        // Đặt lên trên cùng
-        rect.SetAsLastSibling();
-
-        UpdatePosition(eventData);
+        // Chuẩn hóa local transform khi bắt đầu kéo
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        UpdatePosition(eventData);
-    }
-
-    void UpdatePosition(PointerEventData eventData)
-    {
-        // Chuyển screenPoint -> localPoint trong dragRoot
-        RectTransform parentRect = dragRoot as RectTransform;
-        Vector2 localPoint;
-        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            parentRect, eventData.position, canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera, out localPoint))
-        {
-            rect.anchoredPosition = localPoint;
-        }
+        float scale = canvas ? canvas.scaleFactor : 1f;
+        rt.anchoredPosition += eventData.delta / scale;
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
         cg.blocksRaycasts = true;
 
-        // Nếu KHÔNG thả vào Slot hợp lệ → trả về chỗ cũ
-        if (!currentSlot)
+        // nếu không rơi vào slot nào, trả về vị trí cũ
+        if (currentSlot == null)
         {
-            rect.SetParent(startParent, worldPositionStays: false);
-            rect.SetSiblingIndex(startSiblingIndex);
-            rect.anchoredPosition = startAnchoredPos;
+            rt.SetParent(originalParent, true);
+            rt.anchoredPosition = originalAnchoredPos;
+            rt.localScale = Vector3.one;
+            rt.localRotation = Quaternion.identity;
         }
     }
 
-    public void SnapToSlot(DropSlot slot)
+    // được gọi bởi DropSlot khi chấp nhận mảnh này
+    public void SetDroppedOnSlot(DropSlot slot)
     {
         currentSlot = slot;
-        rect.SetParent(slot.transform, worldPositionStays: false);
-        rect.anchoredPosition = Vector2.zero;
-    }
+        var parent = slot.transform as RectTransform;
 
-    public void ReturnToStart()
-    {
-        currentSlot = null;
-        rect.SetParent(startParent, worldPositionStays: false);
-        rect.SetSiblingIndex(startSiblingIndex);
-        rect.anchoredPosition = startAnchoredPos;
+        // Đưa về làm con của slot theo không gian local UI
+        rt.SetParent(parent, false);
+
+        // ★ Snap đúng tâm slot & reset mép
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
     }
 }

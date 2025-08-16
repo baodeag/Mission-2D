@@ -1,58 +1,53 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 
 public class SortShapesTask : MiniGameBase
 {
-    [Header("UI Refs")]
-    [SerializeField] RectTransform itemsRoot;  // gán Transform "Items"
-    [SerializeField] RectTransform slotsRoot;  // gán Transform "Slots"
-    [SerializeField] TextMeshProUGUI hintText; // optional
-    [SerializeField] UnityEngine.UI.Button cancelButton;
-    [SerializeField] UnityEngine.UI.Button resetButton; // optional
+    [Header("UI")]
+    [SerializeField] Button confirmButton;
+    [SerializeField] Button cancelButton;
+    [SerializeField] TextMeshProUGUI statusText;
 
-    DropSlot[] slots;
+    [Header("Slots cần kiểm tra")]
+    [SerializeField] DropSlot[] slots;
 
     protected override void OnOpened()
     {
-        slots = slotsRoot.GetComponentsInChildren<DropSlot>(true);
-        UpdateHint();
-        if (resetButton) resetButton.onClick.AddListener(ResetAll);
-        if (cancelButton) cancelButton.onClick.AddListener(OnCancel);
+        if (confirmButton) confirmButton.interactable = false;
+        if (statusText) statusText.text = "Kéo các hình vào đúng ô đích.";
     }
 
-    void OnDestroy()
+    public void OnAnySlotChanged()
     {
-        if (resetButton) resetButton.onClick.RemoveListener(ResetAll);
-        if (cancelButton) cancelButton.onClick.RemoveListener(OnCancel);
-    }
+        bool allOccupied = true;
+        bool allCorrect = true;
 
-    public void NotifySlotChanged()
-    {
-        // Kiểm tra hoàn thành: tất cả slot filled & correct
         foreach (var s in slots)
         {
-            if (!s.IsCorrectlyFilled) { UpdateHint(); return; }
+            if (!s.occupied) { allOccupied = false; allCorrect = false; break; }
+            if (!s.isCorrect) allCorrect = false;
         }
-        // Done
-        Close(true);
+
+        if (!allOccupied)
+        {
+            if (statusText) statusText.text = "Chưa đủ mảnh. Hãy kéo hết vào các ô.";
+            if (confirmButton) confirmButton.interactable = false;
+            return;
+        }
+
+        if (allCorrect)
+        {
+            if (statusText) statusText.text = "✔ Tất cả chính xác! Nhấn Confirm để hoàn thành.";
+            if (confirmButton) confirmButton.interactable = true;
+        }
+        else
+        {
+            if (statusText) statusText.text = "❌ Có mảnh sai ô. Kéo lại cho đúng.";
+            if (confirmButton) confirmButton.interactable = false;
+        }
     }
 
-    void UpdateHint()
-    {
-        if (!hintText) return;
-        int correct = 0, total = slots.Length;
-        foreach (var s in slots) if (s.IsCorrectlyFilled) correct++;
-        hintText.text = $"Đã đúng: {correct}/{total} – Kéo mọi hình vào đúng khay để hoàn thành.";
-    }
-
-    public void OnCancel() => Close(false);
-
-    public void ResetAll()
-    {
-        // Trả tất cả item về ItemsRoot
-        var items = itemsRoot.GetComponentsInChildren<DragItem>(true);
-        foreach (var s in slots) s.ClearSlot(silent: true);
-        foreach (var it in items) it.ReturnToStart();
-        UpdateHint();
-    }
+    public void OnClickConfirm() => Close(true);
+    public void OnClickCancel() => Close(false);
 }
