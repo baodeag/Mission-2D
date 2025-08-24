@@ -1023,7 +1023,7 @@ GameObject:
   - component: {fileID: 843657447}
   - component: {fileID: 843657446}
   - component: {fileID: 843657452}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1043,8 +1043,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 4.5
-  gravity: -12
   cam: {fileID: 2130406365}
+  airGravity: -20
+  groundedGravity: -0.3
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  groundProbeRadius: 0.35
+  groundProbeOffset: 0.05
+  groundSnapDistance: 0.6
+  stepOffsetGrounded: 0.3
 --- !u!143 &843657447
 CharacterController:
   m_ObjectHideFlags: 0
@@ -1067,9 +1075,9 @@ CharacterController:
   m_Radius: 0.4
   m_SlopeLimit: 45
   m_StepOffset: 0.3
-  m_SkinWidth: 0.08
+  m_SkinWidth: 0.03
   m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 1, z: 0}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!136 &843657448
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -1159,6 +1167,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1320951226}
   - {fileID: 1208306890}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1326,7 +1335,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1208306890}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: PromptAnchor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1378,6 +1387,37 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1894278480}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1320951225
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1320951226}
+  m_Layer: 7
+  m_Name: HeadAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1320951226
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1320951225}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.6, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 843657451}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1323176163
 GameObject:
@@ -2072,7 +2112,7 @@ GameObject:
   - component: {fileID: 2130406364}
   - component: {fileID: 2130406363}
   - component: {fileID: 2130406367}
-  - component: {fileID: 2130406366}
+  - component: {fileID: 2130406368}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -2154,21 +2194,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2130406366
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2130406362}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ae7d07049ffff3745ba741effefb19e7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  target: {fileID: 843657451}
-  offset: {x: 0, y: 8, z: -8}
-  smooth: 8
 --- !u!114 &2130406367
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2213,6 +2238,35 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
+--- !u!114 &2130406368
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2130406362}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: efcf0a384831e6143af8e2252a2448ed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 1320951226}
+  targetOffset: {x: 0, y: 1.6, z: 0}
+  rightMouseToRotate: 1
+  sensitivityX: 4
+  sensitivityY: 2.5
+  minPitch: -30
+  maxPitch: 70
+  distance: 8
+  minDistance: 1.2
+  maxDistance: 8
+  zoomSpeed: 4
+  rotationLerp: 12
+  positionLerp: 12
+  collisionMask:
+    serializedVersion: 2
+    m_Bits: 119
+  collisionRadius: 0.25
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
