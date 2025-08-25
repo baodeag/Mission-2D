@@ -2252,7 +2252,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   target: {fileID: 1320951226}
   targetOffset: {x: 0, y: 1.6, z: 0}
-  rightMouseToRotate: 1
+  rightMouseToRotate: 0
   sensitivityX: 4
   sensitivityY: 2.5
   minPitch: -30
